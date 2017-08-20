@@ -1,0 +1,13 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+docs
+data
+graphs
+GoogleApiKey.rds
+FindingTito.rds
+osmconvert64
+osmfilter
+temp
+_bookdown_files

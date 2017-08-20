@@ -1,0 +1,267 @@
+---
+title: "Gmaps"
+---
+
+# Extracting data from Google Maps
+
+Google Maps does not allow to extract all the street names for a given country, or all streets with a given name in a country. While there may be more efficient ways (suggestions welcome), we proceed by extracting all the names of villages, towns and cities in relevant region from OpenStreetMap, and then query Google Maps for Tito street (or similar) in each of them.
+
+## Extracting all places OpenStreetMap
+
+We use previously downloaded OpenStreetMap dumps with different filters.
+
+```{r warning=FALSE}
+
+# filter only places
+dir.create(path = file.path("data", "o5m-places"), showWarnings = FALSE)
+
+for (i in countries) {
+  if (file.exists(file.path("data", "o5m-places", paste0(i, "-places.o5m")))==FALSE) {
+    system(paste0('./osmfilter data/o5m/', i, '-latest.o5m --keep="place=*" --drop-version > ', 'data/o5m-places/', i, '-places.o5m'))
+  }
+}
+
+# export to csv only street type, name, and lon/lat
+
+dir.create(path = file.path("data", "csv-places"), showWarnings = FALSE)
+
+for (i in countries) {
+  if (file.exists(file.path("data", "csv-places", paste0(i, "-places.csv")))==FALSE) {
+    system(paste0('./osmconvert64 data/o5m-places/', i, '-places.o5m --all-to-nodes --csv="@id @lat @lon place name" > data/csv-places/', i, '-places.csv', " --csv-separator='; '"))
+  }
+}
+
+all_places <- data_frame()
+for (i in countries) {
+  # Import from csv
+  places <- read_delim(file = file.path("data", "csv-places", paste0(i, "-places.csv")), delim = "; ", col_names = FALSE, locale = locale(decimal_mark = "."), trim_ws = TRUE)
+  places <- cbind(places, i)
+  all_places <- bind_rows(all_places, places)
+}
+colnames(all_places)  <- c("id", "lat", "lon", "place", "name", "country")
+
+all_places <- all_places %>% filter(is.na(name)==FALSE) 
+
+ExportData(data = all_places, "all_places")
+
+
+```
+
+This filter provides a list of `r nrow(all_places)` place names; testing mutiple street names for each of them would require a large (and costly) number of queries to the Google Api. We can therefore filter the data in order to include only place names that are tagged as [city](http://wiki.openstreetmap.org/wiki/Tag:place%3Dcity), [town](http://wiki.openstreetmap.org/wiki/Tag:place%3Dtown), [suburb](http://wiki.openstreetmap.org/wiki/Tag:place%3Dsuburb), or [village](http://wiki.openstreetmap.org/wiki/Tag:place%3Dvillage). This should include all inhabited locations with more than 1000 residents, and exclude places tagged as "locality", "isolated_dwelling", and "hamlet", which are expected to be mostly irrelevant. 
+
+```{r}
+# http://wiki.openstreetmap.org/wiki/Tag:place%3Dvillage
+
+all_places_over1000 <- all_places %>% filter(is.na(name)==FALSE) %>% filter(place == "city" | place == "town" | place == "suburb" | place == "village") %>%  distinct()
+
+```
+
+This more restrictive filter provides a sizable, but somewhat more managable dataset of `r nrow(all_places_over1000)` place names.
+
+```{r echo=FALSE}
+ExportData(data = all_places, "all_places_over1000")
+```
+
+## What are potential street names that should be queried?
+
+By simply querying "tito" for all place names emerging from the filter, we would likely still receive meaningful results. However, querying for potential street names should give more accurate results. We can base a list of potential street names in each country on previously extracted OpenStreetMaps data. 
+
+```{r}
+OSM_tito_all <- ImportData("OSM_tito_all")
+
+for (i in unique(OSM_tito_all$country)) {
+  ShowTable(
+    OSM_tito_all %>% filter(country==i) %>% select(streetname, country) %>% count(streetname, country, sort = TRUE) %>% select(streetname, n, country)
+  )
+}
+
+
+```
+
+Considering that if Google Maps does not find exact matches, it offers a similar result (and accordingly deals with transliteration when needed), querying for Tita and Titov should provide an almost complete set of cases.
+Shortcomings of this approach: 
+
+- if there are towns/villages with same name, in the same country, but in different region, only one is counted (Google decides which)
+- if there is more than one street in the same village with similar name (say, both a "Marshal Tito street" and a "Marshal Tito Boulevard"), then only one is counted.
+
+## Finding "titov"" on Google Maps
+
+```{r}
+ all_places_over1000 <- all_places_over1000 %>% filter(is.na(name)==FALSE) %>%  distinct(name, country, .keep_all = TRUE)
+
+titovQuery <- paste("titov", all_places_over1000$name, all_places_over1000$country, sep = ", ")
+
+```
+
+This is the kind of queries that will be made:
+
+```{r}
+ShowTable(head(data_frame(Query = titovQuery)))
+```
+
+Google Maps API has a daily quota of 2500 free queries per day. We can either make 2500 queries per day (it would take more than a week for checking only "Titov" streets) or pay the 0.50 USD/per 1000 queries fee. In this case, querying for all "Titov" streets should cost less than 10 USD.
+
+```{r}
+### if using API, uncomment this section
+
+# saveRDS(object = "<API>", file = "GoogleApiKey.rds")
+# register_google(key = readRDS("GoogleApiKey.rds"), account_type = "premium", day_limit = 50000)
+
+## this just prepares a properly structured data frame
+# titovResults <- cbind(geocode("Titov, Sarajevo, Bosnia and Herzegovina", output='more', messaging=TRUE, override_limit=TRUE), Query = "Maršala Tita, Sarajevo, Bosnia and Herzegovina")
+
+# if (file.exists(file.path("data", "titovResults.rds")==FALSE)) {
+#   for (i in seq_along(titovQuery)) {
+#     temp <- try(geocode(location = titovQuery[i], output='more', messaging=TRUE))
+#     Sys.sleep(time = 1.5) #wait in order to stay within API limits
+#     if (is.na(temp$lon)==FALSE) {
+#       temp <- cbind(temp, Query = titovQuery[i])
+#       titovResults <- bind_rows(titovResults, temp)
+#       # saves the results as the process goes (just in case)
+#       ExportData(data = titovResults, filename = "titovResults", xlsx = FALSE)
+#     }
+#   }
+# }
+
+```
+
+
+```{r}
+### This makes only the number of queries allowed in a given day, then it stops. If you re-run this another day it will pick up from where it left.
+
+
+
+dir.create(path = "temp", showWarnings = FALSE)
+# do nothing if already no free queries available
+if (geocodeQueryCheck()>1) {
+  if (file.exists(file.path("data", "titovResults.rds"))==FALSE) {
+    #this simply aims to prepare a properly structured data frame
+    titovResults <- cbind(geocode("Titov, Sarajevo, Bosnia and Herzegovina", output='more'), Query = "Maršala Tita, Sarajevo, Bosnia and Herzegovina", QueryId = 0)
+    for (i in 1:(geocodeQueryCheck()-1)) {
+      temp <- geocode(location = titovQuery[i], output='more', messaging=FALSE)
+      Sys.sleep(time = 1.5) #wait in order to stay within API limits
+      if (is.na(temp$lon)==FALSE) {
+        temp <- cbind(temp, Query = titovQuery[i], QueryId = i)
+        titovResults <- bind_rows(titovResults, temp)
+        # saves the results as the process goes (just in case)
+        ExportData(data = titovResults, filename = "titovResults", xlsx = FALSE, showDataLink = FALSE)
+      }
+      saveRDS(object = i, file = file.path("temp", "titovProgressId.rds"))
+    }
+  } else {
+    # If this script has already been run, start from where it was last interrupted due to query limit
+    titovResults <- ImportData(filename = "titovResults")
+    titovProgressId <- readRDS(file = file.path("temp", "titovProgressId.rds"))
+    start <- sum(titovProgressId, 1)
+    stop <- sum(titovProgressId, geocodeQueryCheck())
+    temp <- data_frame(lon = "")
+    for (i in start:stop) {
+      # If it receives an "over_quey limit" warning then skip
+      if (temp$lon!="OVER_QUERY_LIMIT") {
+        # makes sure over quota is properly dealt with: if over quota, just skips
+        temp <- tryCatch(expr = geocode(location = titovQuery[i], output='more', messaging=FALSE), warning = function(w) {
+          msg <- conditionMessage(w)
+          if (grepl(pattern = "OVER_QUERY_LIMIT", x = msg) == TRUE) {
+            return(data_frame(lon = "OVER_QUERY_LIMIT", lat = "OVER_QUERY_LIMIT"))
+          } else if (grepl(pattern = "ZERO_RESULTS", x = msg) == TRUE) {
+            return(data_frame(lon = "ZERO_RESULTS", lat = "ZERO_RESULTS"))
+          } else {
+            return(data_frame(lon = msg, lat = msg))
+          }
+        })
+        if (temp$lon=="OVER_QUERY_LIMIT") {
+          # do nothing really
+        } else {
+          Sys.sleep(time = 1.5) #wait in order to stay within API limits
+          if (is.na(temp$lon)==FALSE & temp$lon!="ZERO_RESULTS") {
+            temp <- cbind(temp, Query = titovQuery[i], QueryId = i)
+            titovResults <- bind_rows(titovResults, temp)
+            # saves the results as the process goes, so it can be stopped anytime and nothing is lost
+            ExportData(data = titovResults, filename = "titovResults", xlsx = FALSE, showDataLink = FALSE)
+          }
+          saveRDS(object = i, file = file.path("temp", "titovProgressId.rds"))
+        }
+      }
+    }
+  }
+}
+
+
+
+
+
+
+```
+
+## Polishing the results
+
+Removing results included multiple times, and results that are not streets or squares.
+
+```{r}
+
+titovResults <- ImportData(filename = "titovResults")
+
+titovResultsFiltered <- titovResults %>% filter(type=="route", country != "Italy") %>% distinct(lon, lat) 
+  
+
+```
+
+
+## See the results on a map
+
+
+```{r}
+# Preparing the canvas, and forcing cache
+wb <- c(left = 12, bottom = 40, right = 26, top = 48)
+if (file.exists(file.path("temp", "mapTonerLite.rds"))==FALSE) {
+  saveRDS(object = ggmap::get_stamenmap(bbox = wb, zoom = 6, maptype = "toner-lite") %>% ggmap(), file = file.path("temp", "mapTonerLite.rds"))
+}
+
+mapTonerLite <- readRDS(file = file.path("temp", "mapTonerLite.rds"))
+
+mapTonerLite + geom_point(data=titovResultsFiltered, aes(x=lon, y=lat), color="brown", size=2, alpha=0.5) +
+  labs(x = '', y = '') + labs(title = "Streets and squares dedicated to Tito", subtitle = paste("(based on Google Maps data as of", Sys.Date(), ")"))
+
+
+
+#readRDS(file = file.path("graphs", "OSM_TitoTonerLight.rds"))
+```
+
+Comparing with OpenStreetMaps results
+
+```{r}
+mapTonerLite + geom_point(data=ImportData("OSM_tito_all"), aes(x=lon, y=lat), color="orange", size=2, alpha=0.5) +
+  labs(x = '', y = '') + labs(title = "Streets and squares dedicated to Tito", subtitle = paste("(based on OpenStreetMap data as of", Sys.Date(), ")"))
+
+```
+
+On the same map:
+
+```{r}
+OSM_gmaps_Tito <- bind_rows(titovResultsFiltered, ImportData("OSM_tito_all") %>% select(lon, lat), .id = "Source")
+
+mapTonerLite + geom_point(data=OSM_gmaps_Tito, aes(x=lon, y=lat, color = Source), size=2, alpha=0.5) +
+  labs(x = '', y = '') + labs(title = "Streets and squares dedicated to Tito")
+
+
+```
+
+
+## Alternative visualisation
+
+```{r}
+mapTonerLite + 
+  stat_density2d(
+    aes(x = lon, y = lat, fill = ..level..,  alpha = ..level..),
+    size = 2, bins = 4, data = titovResultsFiltered,
+    geom = "polygon"
+)
+
+mapTonerLite + 
+  stat_density2d(
+    aes(x = lon, y = lat, fill = ..level..,  alpha = ..level..),
+    size = 2, bins = 8, data = titovResultsFiltered,
+    geom = "polygon"
+)
+```
+

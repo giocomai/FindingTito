@@ -1,0 +1,8 @@
+new_session: yes
+output_dir: "docs"
+book_filename: FindingTito
+repo: https://github.com/giocomai/FindingTito/
+before_chapter_script: "functions.R"
+fig_caption: true
+bookdown::pdf_book:
+  latex_engine: xelatex
