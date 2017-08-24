@@ -137,7 +137,13 @@ if (geocodeQueryCheck()>1) {
   if (file.exists(file.path("data", "titovResults.rds"))==FALSE) {
     #this simply aims to prepare a properly structured data frame
     titovResults <- cbind(geocode("Titov, Sarajevo, Bosnia and Herzegovina", output='more'), Query = "Maršala Tita, Sarajevo, Bosnia and Herzegovina", QueryId = 0)
-    for (i in 1:(geocodeQueryCheck()-1)) {
+    start <- sum(titovProgressId, 1)
+    stop <- sum(titovProgressId, geocodeQueryCheck())
+    if (stop>length(titovQuery)) {
+      stop <- length(titovQuery)
+    }
+    temp <- data_frame(lon = "")
+    for (i in start:stop) {
       temp <- geocode(location = titovQuery[i], output='more', messaging=FALSE)
       Sys.sleep(time = 1.5) #wait in order to stay within API limits
       if (is.na(temp$lon)==FALSE) {
@@ -154,6 +160,10 @@ if (geocodeQueryCheck()>1) {
     titovProgressId <- readRDS(file = file.path("temp", "titovProgressId.rds"))
     start <- sum(titovProgressId, 1)
     stop <- sum(titovProgressId, geocodeQueryCheck())
+    if (stop>length(titovQuery)) {
+      stop <- length(titovQuery)
+      start <- length(titovQuery)
+    }
     temp <- data_frame(lon = "")
     for (i in start:stop) {
       # If it receives an "over_quey limit" warning then skip
@@ -193,17 +203,112 @@ if (geocodeQueryCheck()>1) {
 
 ```
 
+
+## Querying separately for 'Marshal tito' ('Маршал Тито')
+
+Given the "popularity" of Maršala Tita/Маршал Тито, even if many have been already captured by querying for Titov, the same process is now repeated for Maršala Tita ('Маршал Тито' in Macedonia).
+Here are some examples of the queries that will be made.
+
+```{r}
+marsalaTitaQuery <- paste("Maršala Tita", all_places_over1000$name, all_places_over1000$country, sep = ", ")
+marsalaTitaQuery[grepl(pattern = ", macedonia", x = marsalaTitaQuery)] <- gsub(pattern = "Maršala Tita, ", replacement = "Маршал Тито, ", marsalaTitaQuery[grepl(pattern = ", macedonia", x = marsalaTitaQuery)])
+
+head(x = marsalaTitaQuery)
+head(x = marsalaTitaQuery[grepl(pattern = ", macedonia", x = marsalaTitaQuery)])
+```
+
+```{r}
+
+
+dir.create(path = "temp", showWarnings = FALSE)
+# do nothing if already no free queries available
+if (geocodeQueryCheck()>1) {
+  if (file.exists(file.path("data", "marsalaTitaResults.rds"))==FALSE) {
+    #this simply aims to prepare a properly structured data frame
+    marsalaTitaResults <- cbind(geocode("Maršala Tita, Sarajevo, Bosnia and Herzegovina", output='more'), Query = "Maršala Tita, Sarajevo, Bosnia and Herzegovina", QueryId = 0)
+    start <- sum(1)
+    stop <- geocodeQueryCheck()
+    if (stop>length(marsalaTitaQuery)) {
+      stop <- length(marsalaTitaQuery)
+    }
+    temp <- data_frame(lon = "")
+    for (i in start:stop) {
+      temp <- geocode(location = marsalaTitaQuery[i], output='more', messaging=FALSE)
+      Sys.sleep(time = 1.5) #wait in order to stay within API limits
+      if (is.na(temp$lon)==FALSE) {
+        temp <- cbind(temp, Query = marsalaTitaQuery[i], QueryId = i)
+        marsalaTitaResults <- bind_rows(marsalaTitaResults, temp)
+        # saves the results as the process goes (just in case)
+        ExportData(data = marsalaTitaResults, filename = "marsalaTitaResults", xlsx = FALSE, showDataLink = FALSE)
+      }
+      saveRDS(object = i, file = file.path("temp", "marsalaTitaProgressId.rds"))
+    }
+  } else {
+    # If this script has already been run, start from where it was last interrupted due to query limit
+    marsalaTitaResults <- ImportData(filename = "marsalaTitaResults")
+    marsalaTitaProgressId <- readRDS(file = file.path("temp", "marsalaTitaProgressId.rds"))
+    start <- sum(marsalaTitaProgressId, 1)
+    stop <- sum(marsalaTitaProgressId, geocodeQueryCheck())
+    if (stop>length(marsalaTitaQuery)) {
+      stop <- length(marsalaTitaQuery)
+      start <- length(marsalaTitaQuery)
+    }
+    temp <- data_frame(lon = "")
+    for (i in start:stop) {
+      # If it receives an "over_quey limit" warning then skip
+      if (temp$lon!="OVER_QUERY_LIMIT") {
+        # makes sure over quota is properly dealt with: if over quota, just skips
+        temp <- tryCatch(expr = geocode(location = marsalaTitaQuery[i], output='more', messaging=FALSE), warning = function(w) {
+          msg <- conditionMessage(w)
+          if (grepl(pattern = "OVER_QUERY_LIMIT", x = msg) == TRUE) {
+            return(data_frame(lon = "OVER_QUERY_LIMIT", lat = "OVER_QUERY_LIMIT"))
+          } else if (grepl(pattern = "ZERO_RESULTS", x = msg) == TRUE) {
+            return(data_frame(lon = "ZERO_RESULTS", lat = "ZERO_RESULTS"))
+          } else {
+            return(data_frame(lon = msg, lat = msg))
+          }
+        })
+        if (temp$lon=="OVER_QUERY_LIMIT") {
+          # do nothing really
+        } else {
+          Sys.sleep(time = 1.5) #wait in order to stay within API limits
+          if (is.na(temp$lon)==FALSE & temp$lon!="ZERO_RESULTS") {
+            temp <- cbind(temp, Query = marsalaTitaQuery[i], QueryId = i)
+            marsalaTitaResults <- bind_rows(marsalaTitaResults, temp)
+            # saves the results as the process goes, so it can be stopped anytime and nothing is lost
+            ExportData(data = marsalaTitaResults, filename = "marsalaTitaResults", xlsx = FALSE, showDataLink = FALSE)
+          }
+          saveRDS(object = i, file = file.path("temp", "marsalaTitaProgressId.rds"))
+        }
+      }
+    }
+  }
+}
+
+
+
+```
+
+
 ## Polishing the results
 
 Removing results included multiple times, and results that are not streets or squares.
 
 ```{r}
 
-titovResults <- ImportData(filename = "titovResults")
+titovResults <- ImportData(filename = "titovResults") %>% filter(type=="route", country != "Italy") %>% distinct(lon, lat) 
+marsalaTitaResults <- ImportData(filename = "marsalaTitaResults" )%>% filter(type=="route", country != "Italy") %>% distinct(lon, lat) 
+TitoGmapsResults <- bind_rows(titovResults, marsalaTitaResults)
 
-titovResultsFiltered <- titovResults %>% filter(type=="route", country != "Italy") %>% distinct(lon, lat) 
+titovResultsFiltered <- titovResults 
   
 
+```
+
+Out of curiosity, how many new locations have been found through the second batch of queries (Marsal Tito) that had not been found earlier (querying fot 'Titov)?
+
+```{r}
+dplyr::setdiff(marsalaTitaResults, titovResults) %>% nrow()
 ```
 
 
@@ -260,7 +365,7 @@ mapTonerLite +
 mapTonerLite + 
   stat_density2d(
     aes(x = lon, y = lat, fill = ..level..,  alpha = ..level..),
-    size = 2, bins = 8, data = titovResultsFiltered,
+    size = 2, bins = 6, data = titovResultsFiltered,
     geom = "polygon"
 )
 ```
