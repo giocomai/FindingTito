@@ -78,7 +78,8 @@ for (i in unique(OSM_tito_all$country)) {
 
 ```
 
-Considering that if Google Maps does not find exact matches, it offers a similar result (and accordingly deals with transliteration when needed), querying for Tita and Titov should provide an almost complete set of cases.
+Considering that if Google Maps does not find exact matches, it offers a similar result (and accordingly deals with transliteration when needed), querying for 'Titov' and 'Maršala Tita' should provide an almost complete set of cases.
+
 Shortcomings of this approach: 
 
 - if there are towns/villages with same name, in the same country, but in different region, only one is counted (Google decides which)
@@ -296,77 +297,19 @@ Removing results included multiple times, and results that are not streets or sq
 
 ```{r}
 
-titovResults <- ImportData(filename = "titovResults") %>% filter(type=="route", country != "Italy") %>% distinct(lon, lat) 
-marsalaTitaResults <- ImportData(filename = "marsalaTitaResults" )%>% filter(type=="route", country != "Italy") %>% distinct(lon, lat) 
-TitoGmapsResults <- bind_rows(titovResults, marsalaTitaResults)
+titovResults <- ImportData(filename = "titovResults") 
+marsalaTitaResults <- ImportData(filename = "marsalaTitaResults" )
 
-titovResultsFiltered <- titovResults 
-  
+TitoGmapsResults <- bind_rows(titovResults, marsalaTitaResults) %>% 
+  filter(type=="route", country != "Italy") %>% # exclude non-YU and non streets/squares
+  filter(grepl(pattern = "Tit|Tит", x = route)) %>% # remove most non-tito
+  filter(!grepl(pattern = "Strozzi|Brezova", x = route)) %>%  # remove remaining non-Tito
+  distinct(address, .keep_all = TRUE) %>% # remove those with same address
+  distinct(locality, route, .keep_all = TRUE) %>% #remove same locality, same street name
+  distinct(lon, lat, route) 
 
-```
-
-Out of curiosity, how many new locations have been found through the second batch of queries (Marsal Tito) that had not been found earlier (querying fot 'Titov)?
-
-```{r}
-dplyr::setdiff(marsalaTitaResults, titovResults) %>% nrow()
-```
+ExportData(data = TitoGmapsResults, filename = "TitoGmapsResults")
 
 
-## See the results on a map
-
-
-```{r}
-# Preparing the canvas, and forcing cache
-wb <- c(left = 12, bottom = 40, right = 26, top = 48)
-if (file.exists(file.path("temp", "mapTonerLite.rds"))==FALSE) {
-  saveRDS(object = ggmap::get_stamenmap(bbox = wb, zoom = 6, maptype = "toner-lite") %>% ggmap(), file = file.path("temp", "mapTonerLite.rds"))
-}
-
-mapTonerLite <- readRDS(file = file.path("temp", "mapTonerLite.rds"))
-
-mapTonerLite + geom_point(data=titovResultsFiltered, aes(x=lon, y=lat), color="brown", size=2, alpha=0.5) +
-  labs(x = '', y = '') + labs(title = "Streets and squares dedicated to Tito", subtitle = paste("(based on Google Maps data as of", Sys.Date(), ")"))
-
-
-
-#readRDS(file = file.path("graphs", "OSM_TitoTonerLight.rds"))
-```
-
-Comparing with OpenStreetMaps results
-
-```{r}
-mapTonerLite + geom_point(data=ImportData("OSM_tito_all"), aes(x=lon, y=lat), color="orange", size=2, alpha=0.5) +
-  labs(x = '', y = '') + labs(title = "Streets and squares dedicated to Tito", subtitle = paste("(based on OpenStreetMap data as of", Sys.Date(), ")"))
-
-```
-
-On the same map:
-
-```{r}
-OSM_gmaps_Tito <- bind_rows(titovResultsFiltered, ImportData("OSM_tito_all") %>% select(lon, lat), .id = "Source")
-
-mapTonerLite + geom_point(data=OSM_gmaps_Tito, aes(x=lon, y=lat, color = Source), size=2, alpha=0.5) +
-  labs(x = '', y = '') + labs(title = "Streets and squares dedicated to Tito")
-
-
-```
-
-
-## Alternative visualisation
-
-```{r}
-mapTonerLite + 
-  stat_density2d(
-    aes(x = lon, y = lat, fill = ..level..,  alpha = ..level..),
-    size = 2, bins = 4, data = titovResultsFiltered,
-    geom = "polygon"
-)
-
-mapTonerLite + 
-  stat_density2d(
-    aes(x = lon, y = lat, fill = ..level..,  alpha = ..level..),
-    size = 2, bins = 6, data = titovResultsFiltered,
-    geom = "polygon"
-)
 ```
 
