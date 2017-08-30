@@ -10,9 +10,8 @@ bookdown::gitbook:
         <li><a href="./"><b>Streets and squares dedicated to Tito in the former Yugoslavia</a></b></li>
       after: |
         <li><a href="http://www.giorgiocomai.eu" target="blank">A project by Giorgio Comai</a></li>
-    download: [pdf, epub]
+    download: [pdf]
     edit: https://github.com/giocomai/FindingTito/edit/master/%s
-#bookdown::pdf_book:
-#  latex_engine: xelatex
-#bookdown::epub_book:
-#  dev: svglite
+bookdown::pdf_book:
+  latex_engine: xelatex
+
