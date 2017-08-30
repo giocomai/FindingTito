@@ -137,7 +137,7 @@ dir.create(path = "temp", showWarnings = FALSE)
 if (geocodeQueryCheck()>1) {
   if (file.exists(file.path("data", "titovResults.rds"))==FALSE) {
     #this simply aims to prepare a properly structured data frame
-    titovResults <- cbind(geocode("Titov, Sarajevo, Bosnia and Herzegovina", output='more'), Query = "Maršala Tita, Sarajevo, Bosnia and Herzegovina", QueryId = 0)
+    titovResults <- cbind(geocode("Titov, Sarajevo, Bosnia and Herzegovina", output='more'), Query = "Titov, Sarajevo, Bosnia and Herzegovina", QueryId = 0)
     start <- sum(titovProgressId, 1)
     stop <- sum(titovProgressId, geocodeQueryCheck())
     if (stop>length(titovQuery)) {
@@ -159,45 +159,44 @@ if (geocodeQueryCheck()>1) {
     # If this script has already been run, start from where it was last interrupted due to query limit
     titovResults <- ImportData(filename = "titovResults")
     titovProgressId <- readRDS(file = file.path("temp", "titovProgressId.rds"))
-    start <- sum(titovProgressId, 1)
-    stop <- sum(titovProgressId, geocodeQueryCheck())
-    if (stop>length(titovQuery)) {
-      stop <- length(titovQuery)
-      start <- length(titovQuery)
-    }
-    temp <- data_frame(lon = "")
-    for (i in start:stop) {
-      # If it receives an "over_quey limit" warning then skip
-      if (temp$lon!="OVER_QUERY_LIMIT") {
-        # makes sure over quota is properly dealt with: if over quota, just skips
-        temp <- tryCatch(expr = geocode(location = titovQuery[i], output='more', messaging=FALSE), warning = function(w) {
-          msg <- conditionMessage(w)
-          if (grepl(pattern = "OVER_QUERY_LIMIT", x = msg) == TRUE) {
-            return(data_frame(lon = "OVER_QUERY_LIMIT", lat = "OVER_QUERY_LIMIT"))
-          } else if (grepl(pattern = "ZERO_RESULTS", x = msg) == TRUE) {
-            return(data_frame(lon = "ZERO_RESULTS", lat = "ZERO_RESULTS"))
+    if (titovProgressId<length(titovQuery)) {
+      start <- sum(titovProgressId, 1)
+      stop <- sum(titovProgressId, geocodeQueryCheck())
+      if (stop>length(titovQuery)) {
+        stop <- length(titovQuery)
+      }
+      temp <- data_frame(lon = "")
+      for (i in start:stop) {
+        # If it receives an "over_quey limit" warning then skip
+        if (temp$lon!="OVER_QUERY_LIMIT") {
+          # makes sure over quota is properly dealt with: if over quota, just skips
+          temp <- tryCatch(expr = geocode(location = titovQuery[i], output='more', messaging=FALSE), warning = function(w) {
+            msg <- conditionMessage(w)
+            if (grepl(pattern = "OVER_QUERY_LIMIT", x = msg) == TRUE) {
+              return(data_frame(lon = "OVER_QUERY_LIMIT", lat = "OVER_QUERY_LIMIT"))
+            } else if (grepl(pattern = "ZERO_RESULTS", x = msg) == TRUE) {
+              return(data_frame(lon = "ZERO_RESULTS", lat = "ZERO_RESULTS"))
+            } else {
+              return(data_frame(lon = msg, lat = msg))
+            }
+          })
+          if (temp$lon=="OVER_QUERY_LIMIT") {
+            # do nothing really
           } else {
-            return(data_frame(lon = msg, lat = msg))
+            Sys.sleep(time = 1.5) #wait in order to stay within API limits
+            if (is.na(temp$lon)==FALSE & temp$lon!="ZERO_RESULTS") {
+              temp <- cbind(temp, Query = titovQuery[i], QueryId = i)
+              titovResults <- bind_rows(titovResults, temp)
+              # saves the results as the process goes, so it can be stopped anytime and nothing is lost
+              ExportData(data = titovResults, filename = "titovResults", xlsx = FALSE, showDataLink = FALSE)
+            }
+            saveRDS(object = i, file = file.path("temp", "titovProgressId.rds"))
           }
-        })
-        if (temp$lon=="OVER_QUERY_LIMIT") {
-          # do nothing really
-        } else {
-          Sys.sleep(time = 1.5) #wait in order to stay within API limits
-          if (is.na(temp$lon)==FALSE & temp$lon!="ZERO_RESULTS") {
-            temp <- cbind(temp, Query = titovQuery[i], QueryId = i)
-            titovResults <- bind_rows(titovResults, temp)
-            # saves the results as the process goes, so it can be stopped anytime and nothing is lost
-            ExportData(data = titovResults, filename = "titovResults", xlsx = FALSE, showDataLink = FALSE)
-          }
-          saveRDS(object = i, file = file.path("temp", "titovProgressId.rds"))
         }
       }
     }
   }
 }
-
-
 
 
 
@@ -248,44 +247,46 @@ if (geocodeQueryCheck()>1) {
     # If this script has already been run, start from where it was last interrupted due to query limit
     marsalaTitaResults <- ImportData(filename = "marsalaTitaResults")
     marsalaTitaProgressId <- readRDS(file = file.path("temp", "marsalaTitaProgressId.rds"))
-    start <- sum(marsalaTitaProgressId, 1)
-    stop <- sum(marsalaTitaProgressId, geocodeQueryCheck())
-    if (stop>length(marsalaTitaQuery)) {
-      stop <- length(marsalaTitaQuery)
-      start <- length(marsalaTitaQuery)
-    }
-    temp <- data_frame(lon = "")
-    for (i in start:stop) {
-      # If it receives an "over_quey limit" warning then skip
-      if (temp$lon!="OVER_QUERY_LIMIT") {
-        # makes sure over quota is properly dealt with: if over quota, just skips
-        temp <- tryCatch(expr = geocode(location = marsalaTitaQuery[i], output='more', messaging=FALSE), warning = function(w) {
-          msg <- conditionMessage(w)
-          if (grepl(pattern = "OVER_QUERY_LIMIT", x = msg) == TRUE) {
-            return(data_frame(lon = "OVER_QUERY_LIMIT", lat = "OVER_QUERY_LIMIT"))
-          } else if (grepl(pattern = "ZERO_RESULTS", x = msg) == TRUE) {
-            return(data_frame(lon = "ZERO_RESULTS", lat = "ZERO_RESULTS"))
-          } else {
-            return(data_frame(lon = msg, lat = msg))
+    if (marsalaTitaProgressId<length(marsalaTitaQuery)) {
+      start <- sum(marsalaTitaProgressId, 1)
+      stop <- sum(marsalaTitaProgressId, geocodeQueryCheck())
+      if (stop>length(marsalaTitaQuery)) {
+        stop <- length(marsalaTitaQuery)
+      }
+      temp <- data_frame(lon = "")
+      if (start!=stop) {
+        for (i in start:stop) {
+          # If it receives an "over_quey limit" warning then skip
+          if (temp$lon!="OVER_QUERY_LIMIT") {
+            # makes sure over quota is properly dealt with: if over quota, just skips
+            temp <- tryCatch(expr = geocode(location = marsalaTitaQuery[i], output='more', messaging=FALSE), warning = function(w) {
+              msg <- conditionMessage(w)
+              if (grepl(pattern = "OVER_QUERY_LIMIT", x = msg) == TRUE) {
+                return(data_frame(lon = "OVER_QUERY_LIMIT", lat = "OVER_QUERY_LIMIT"))
+              } else if (grepl(pattern = "ZERO_RESULTS", x = msg) == TRUE) {
+                return(data_frame(lon = "ZERO_RESULTS", lat = "ZERO_RESULTS"))
+              } else {
+                return(data_frame(lon = msg, lat = msg))
+              }
+            })
+            if (temp$lon=="OVER_QUERY_LIMIT") {
+              # do nothing really
+            } else {
+              Sys.sleep(time = 1.5) #wait in order to stay within API limits
+              if (is.na(temp$lon)==FALSE & temp$lon!="ZERO_RESULTS") {
+                temp <- cbind(temp, Query = marsalaTitaQuery[i], QueryId = i)
+                marsalaTitaResults <- bind_rows(marsalaTitaResults, temp)
+                # saves the results as the process goes, so it can be stopped anytime and nothing is lost
+                ExportData(data = marsalaTitaResults, filename = "marsalaTitaResults", xlsx = FALSE, showDataLink = FALSE)
+              }
+              saveRDS(object = i, file = file.path("temp", "marsalaTitaProgressId.rds"))
+            }
           }
-        })
-        if (temp$lon=="OVER_QUERY_LIMIT") {
-          # do nothing really
-        } else {
-          Sys.sleep(time = 1.5) #wait in order to stay within API limits
-          if (is.na(temp$lon)==FALSE & temp$lon!="ZERO_RESULTS") {
-            temp <- cbind(temp, Query = marsalaTitaQuery[i], QueryId = i)
-            marsalaTitaResults <- bind_rows(marsalaTitaResults, temp)
-            # saves the results as the process goes, so it can be stopped anytime and nothing is lost
-            ExportData(data = marsalaTitaResults, filename = "marsalaTitaResults", xlsx = FALSE, showDataLink = FALSE)
-          }
-          saveRDS(object = i, file = file.path("temp", "marsalaTitaProgressId.rds"))
         }
       }
     }
   }
 }
-
 
 
 ```

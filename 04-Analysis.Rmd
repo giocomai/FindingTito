@@ -18,12 +18,14 @@ if (file.exists(file.path("temp", "mapTonerLite.rds"))==FALSE) {
 
 mapTonerLite <- readRDS(file = file.path("temp", "mapTonerLite.rds"))
 
-mapTonerLite + geom_point(data=TitoGmapsResults, aes(x=lon, y=lat), color="brown", size=2, alpha=0.5) +
+TitoGmapsResults_point_gg <- 
+  mapTonerLite + geom_point(data=TitoGmapsResults, aes(x=lon, y=lat), color="brown", size=2, alpha=0.5) +
   labs(x = '', y = '') + labs(title = "Streets and squares dedicated to Tito", subtitle = paste("(based on Google Maps data as of", Sys.Date(), ")"))
 
+TitoGmapsResults_point_gg
 
+ExportGraph(graph = TitoGmapsResults_point_gg, filename = "TitoGmapsResults_point_gg")
 
-#readRDS(file = file.path("graphs", "OSM_TitoTonerLight.rds"))
 ```
 
 Comparing with OpenStreetMaps results
@@ -49,33 +51,28 @@ mapTonerLite + geom_point(data=OSM_gmaps_Tito, aes(x=lon, y=lat, color = Source)
 ## Density visualisations
 
 ```{r}
-mapTonerLite + 
-  stat_density2d(
-    aes(x = lon, y = lat, fill = ..level..,  alpha = ..level..),
-    size = 2, bins = 4, data = TitoGmapsResults,
-    geom = "polygon"
-)
 
-mapTonerLite + 
-  stat_density2d(
-    aes(x = lon, y = lat, fill = ..level..,  alpha = ..level..),
-    size = 2, bins = 6, data = TitoGmapsResults,
-    geom = "polygon"
-)
-
-mapTonerLite + 
+TitoGmaps_density_gg <- mapTonerLite + 
   stat_density2d(
     aes(x = lon, y = lat, fill = ..level..,  alpha = ..level..),
     size = 2, bins = 8, data = TitoGmapsResults,
     geom = "polygon"
 )
 
+TitoGmaps_density_gg
 
-mapTonerLite + stat_bin2d(
-  aes(x = lon, y = lat),
-  size = .5, bins = 20, alpha = 1/2,
-  data = TitoGmapsResults) +
+ExportGraph(graph = TitoGmaps_density_gg, filename = "TitoGmaps_density_gg")
+
+TitoGmaps_density_sq_gg <- 
+  mapTonerLite + stat_bin2d(
+    aes(x = lon, y = lat),
+    size = .5, bins = 20, alpha = 1/2,
+    data = TitoGmapsResults) +
   scale_fill_gradient(low = "#ffffb2", high = "#bd0026")
+
+TitoGmaps_density_sq_gg
+
+ExportGraph(graph = TitoGmaps_density_sq_gg, filename = "TitoGmaps_density_sq_gg")
 
 ```
 
@@ -117,10 +114,12 @@ ExportGraph(graph = TitoGmapsByCountry_gg, filename = "TitoGmapsByCountry_gg")
 
 ```{r}
 ShowTable(TitoGmapsMore %>% count(administrative_area_level_1, country, sort = TRUE))
+ExportData(data = TitoGmapsMore %>% count(administrative_area_level_1, country, sort = TRUE), filename = "TitoGmapsByAdmin1")
 ```
 
 ```{r}
 ShowTable(TitoGmapsMore %>% count(administrative_area_level_2, country, sort = TRUE))
+ExportData(data = TitoGmapsMore %>% count(administrative_area_level_2, country, sort = TRUE), filename = "TitoGmapsByAdmin2")
 ```
 
 

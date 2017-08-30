@@ -1,0 +1,33 @@
+---
+title: "Summary"
+---
+
+# Summary of results
+
+In the former Yugoslavia, streets and squares dedicated to Tito are commonplace in some areas (in particular, Istria and Vojvodina) but almost absent in others. The results presented below refer to data found by systematically querying the Google Maps API; OpenStreetMap data proved to be incomplete and partially misleading, as they would not have allowed to identify the area that seems to have the higher density of streets and squares dedicated to Tito (Vojvodina).
+
+Also data found via Google Maps may be incomplete, or not completely up to date, yet they likely offer a meaningful picture of the presence and distribution of streets and squares dedicated to Tito in the former Yugoslavia.
+
+All results can be (viewed as a layer on Google Maps)[https://www.google.com/maps/d/viewer?mid=1U7EqM2XDLHpyjJaEBy3inOETYg4], or in the maps below.
+
+## All Tito streets on a map
+
+```{r}
+ImportGraph(filename = "TitoGmapsResults_point_gg")
+```
+
+## Density of Tito streets
+
+```{r}
+ImportGraph(filename = "TitoGmaps_density_gg")
+ImportGraph(filename = "TitoGmaps_density_sq_gg")
+```
+
+## Tito streets by country
+
+```{r}
+ShowTable(data = ImportData(filename = "TitoGmapsByCountry"),caption = "Streets and squares dedicated to Tito in the former Yugoslavia, by country, according to Google Maps - giorgiocomai.eu/FindingTito")
+
+ImportGraph(filename = "TitoGmapsByCountry_gg")
+```
+

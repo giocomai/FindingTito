@@ -10,7 +10,7 @@ documentclass: book
 
 [This document is currently in draft form: please do not cite until this notice is removed.]
 
-**[Click here to see all streets and squares dedicated to Tito identified by this script as an overlay on Google Maps](https://drive.google.com/open?id=1U7EqM2XDLHpyjJaEBy3inOETYg4&usp=sharing).**
+**[Click here to see all streets and squares dedicated to Tito identified by this script as an overlay on Google Maps](https://www.google.com/maps/d/viewer?mid=1U7EqM2XDLHpyjJaEBy3inOETYg4).**
 
 ## What is this all about?
 
