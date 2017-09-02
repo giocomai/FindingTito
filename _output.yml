@@ -11,6 +11,8 @@ bookdown::gitbook:
         <li><a href="https://www.giorgiocomai.eu" target="blank">A project by Giorgio Comai</a><a href="https://twitter.com/giocomai" target="blank">@giocomai</a></li>
         <li></li>
         <li><a href="https://creativecommons.org/licenses/by/4.0/" target="blank">Creative Commons (CC-BY-4.0)</a></li>
+        <li><a href="https://github.com/giocomai/FindingTito" target="blank">Source code available on GitHub</a></li>
+        
     download: [pdf]
     edit: https://github.com/giocomai/FindingTito/edit/master/%s
 bookdown::pdf_book:
