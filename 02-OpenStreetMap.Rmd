@@ -15,7 +15,8 @@ Filtering and extracting contents from OpenStreetMap dump files is facilitated b
 dir.create(path = "osmosis", showWarnings = FALSE)
 
 if (file.exists(file.path("osmosis", "osmosis-latest.tgz"))==FALSE) {
-  download.file(url = "http://bretth.dev.openstreetmap.org/osmosis-build/osmosis-latest.tgz", destfile = file.path("osmosis", "osmosis-latest.tgz"))
+  download.file(url = "http://bretth.dev.openstreetmap.org/osmosis-build/osmosis-latest.tgz",
+                destfile = file.path("osmosis", "osmosis-latest.tgz"))
   untar(tarfile = file.path("osmosis", "osmosis-latest.tgz"), exdir = "osmosis")
   system(command = "chmod a+x osmosis/bin/osmosis")
 }
@@ -47,7 +48,8 @@ dir.create(path = file.path("data", "pbf"), showWarnings = FALSE)
 
 for (i in countries) {
   if (file.exists(file.path("data", "pbf", paste0(i, "-latest.osm.pbf")))==FALSE) {
-    download.file(url = paste0("http://download.geofabrik.de/europe/", i, "-latest.osm.pbf"), destfile = file.path("data", "pbf", paste0(i, "-latest.osm.pbf")))
+    download.file(url = paste0("http://download.geofabrik.de/europe/", i, "-latest.osm.pbf"),
+                  destfile = file.path("data", "pbf", paste0(i, "-latest.osm.pbf")))
   }
 }
 
@@ -55,16 +57,19 @@ for (i in countries) {
 
 ## Keep only street names
 
-Through the above-mentioned utilities, all names of street found in the region have been extracted from the dump and converted to .cvs format. This has been accomplished by filtering only the names of objects recorded under the key `highway` in OpenStreetMap. The name of the key is however slightly misleading, since, as reported in [OpenStreetMap's wiki](http://wiki.openstreetmap.org/wiki/Key:highway), "the key `highway=*` is the main key used for identifying any kind of road, street or path."
+Through the above-mentioned utilities, all names of street found in the region have been extracted from the dump and converted to .cvs format. This has been accomplished by filtering only the names of objects recorded under the key `highway` in OpenStreetMap, which according to [OpenStreetMap's wiki](http://wiki.openstreetmap.org/wiki/Key:highway) and in spite of its name, "is the main key used for identifying any kind of road, street or path."
 
-At this stage, only streets have been included in the filter, but other OpenStreetMap categories may include relevant data, e.g. [`Tag:place=square`](http://wiki.openstreetmap.org/wiki/Tag:place%3Dsquare), or [`Tag:leisure=park`](http://wiki.openstreetmap.org/wiki/Tag:leisure%3Dpark). 
+At this stage, only streets have been included in the filter, but other OpenStreetMap categories may include relevant data, e.g. [`Tag:place=square`](http://wiki.openstreetmap.org/wiki/Tag:place%3Dsquare), or [`Tag:leisure=park`](http://wiki.openstreetmap.org/wiki/Tag:leisure%3Dpark).
+
 ```{r}
 # convert to a format that can be read by osmfilter, and remove author data to reduce file size
 dir.create(path = file.path("data", "o5m"), showWarnings = FALSE)
 
 for (i in countries) {
   if (file.exists(file.path("data", "o5m", paste0(i, "-latest.o5m")))==FALSE) {
-    system(paste0('./osmconvert64 data/pbf/', i, '-latest.osm.pbf --drop-version --out-o5m -o=data/o5m/', i, '-latest.o5m'))
+    system(paste0('./osmconvert64 data/pbf/', i, 
+                  '-latest.osm.pbf --drop-version --out-o5m -o=data/o5m/', i,
+                  '-latest.o5m'))
   }
 }
 
@@ -83,7 +88,9 @@ dir.create(path = file.path("data", "csv-streets"), showWarnings = FALSE)
 
 for (i in countries) {
   if (file.exists(file.path("data", "csv-streets", paste0(i, "-streets.csv")))==FALSE) {
-    system(paste0('./osmconvert64 data/o5m-streets/', i, '-streets.o5m --all-to-nodes --csv="@id @lat @lon highway name" > data/csv-streets/', i, '-streets.csv', " --csv-separator='; '"))
+    system(paste0('./osmconvert64 data/o5m-streets/', i,
+                  '-streets.o5m --all-to-nodes --csv="@id @lat @lon highway name" > data/csv-streets/', i,
+                  '-streets.csv', " --csv-separator='; '"))
   }
 }
 
@@ -109,7 +116,11 @@ tito_all <- data_frame()
 
 for (i in countries) {
   # Import from csv
-  temp_streets <- read_delim(file = file.path("data", "csv-streets", paste0(i, "-streets.csv")), delim = "; ", col_names = FALSE, locale = locale(decimal_mark = "."), trim_ws = TRUE)
+  temp_streets <- read_delim(file = file.path("data", "csv-streets", paste0(i, "-streets.csv")),
+                             delim = "; ",
+                             col_names = FALSE, 
+                             locale = locale(decimal_mark = "."),
+                             trim_ws = TRUE)
   # Store total number of streets for each country
   StreetsSummary$TotalStreets[StreetsSummary$Country==i] <- nrow(temp_streets)
   # Filter only Tito's streets
@@ -140,7 +151,7 @@ ExportData(data = tito_all, filename = "OSM_tito_all")
 
 ## Preliminary results based on OpenStreetMap
 
-**As appears from the following sections, these data include substantial inaccuracies**
+**As appears from the following sections, these data include substantial inaccuracies. They are reported here as preliminary results based on OpenStreetMap. See the following sections for more accurate data.**
 
 ### Number of streets dedicated to Tito
 
@@ -156,7 +167,8 @@ StreetsSummary %>%
   geom_text(hjust = -0.1) +
   coord_flip() +
   theme_minimal() +
-  labs(title = "Number of streets dedicated to Tito", subtitle = paste("(based on OpenStreetMaps data as of", Sys.Date(), ")"))
+  labs(title = "Number of streets dedicated to Tito",
+       subtitle = "Based on OpenStreetMaps data")
 
 ```
 
@@ -178,7 +190,9 @@ if (file.exists(file.path("temp", "mapTonerLite.rds"))==FALSE) {
 mapTonerLite <- readRDS(file = file.path("temp", "mapTonerLite.rds"))
 
 OSM_TitoTonerLight <-  mapTonerLite + geom_point(data=tito_all, aes(x=lon, y=lat), color="red", size=2, alpha=0.5) +
-  labs(x = '', y = '') + labs(title = "Streets and squares dedicated to Tito", subtitle = paste("(based on OpenStreetMaps data as of", Sys.Date(), ")"))
+  labs(x = '', y = '') + 
+  labs(title = "Streets and squares dedicated to Tito", 
+       subtitle = paste("based on OpenStreetMap"))
 
 OSM_TitoTonerLight
 
@@ -199,7 +213,9 @@ mapG <- readRDS(file = file.path("temp", "mapG.rds"))
 
 ggmap(mapG) + 
   geom_point(data=tito_all, aes(x=lon, y=lat), color="red", size=2, alpha=0.5) +
-  labs(x = '', y = '') + labs(title = "Streets and squares dedicated to Tito", subtitle = paste("(based on OpenStreetMaps data as of", Sys.Date(), ")"))
+  labs(x = '', y = '') +
+  labs(title = "Streets and squares dedicated to Tito", 
+       subtitle = paste("Based on OpenStreetMap data"))
 
 ExportGraph(filename = "OSM_TitoGmaps")  
 

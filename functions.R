@@ -65,7 +65,7 @@ ExportGraph <- function(graph = NULL, filename, width = 8, height = 4.944375773,
     saveRDS(object = graph, file = file.path("graphs", paste0(filename, ".rds")))
   }
   if (showGraphLink == TRUE) {
-    cat(paste0("\nThe graph is available for download in [.png]", paste0("(", file.path("graphs", paste0(filename, ".png")), "), ", "[.svg]", paste0("(", file.path("graphs", paste0(filename, ".svg")), "), ", "and as an object in R's [.rds format]", paste0("(", file.path("graphs", paste0(filename, ".rds")), ").")))))
+    cat(paste0("\nThis image is available for download in [.png]", paste0("(", file.path("graphs", paste0(filename, ".png")), "), ", "[.svg]", paste0("(", file.path("graphs", paste0(filename, ".svg")), "), ", "and as an object in R's [.rds format]", paste0("(", file.path("graphs", paste0(filename, ".rds")), ").")))))
   }
 }
 

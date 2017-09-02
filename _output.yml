@@ -7,9 +7,10 @@ bookdown::gitbook:
       depth: 4
       before: |
         <li><a href="./"><b>Finding Tito</a></b></li>
-        <li><a href="./"><b>Streets and squares dedicated to Tito in the former Yugoslavia</a></b></li>
       after: |
-        <li><a href="http://www.giorgiocomai.eu" target="blank">A project by Giorgio Comai</a></li>
+        <li><a href="https://www.giorgiocomai.eu" target="blank">A project by Giorgio Comai</a><a href="https://twitter.com/giocomai" target="blank">@giocomai</a></li>
+        <li></li>
+        <li><a href="https://creativecommons.org/licenses/by/4.0/" target="blank">Creative Commons (CC-BY-4.0)</a></li>
     download: [pdf]
     edit: https://github.com/giocomai/FindingTito/edit/master/%s
 bookdown::pdf_book:

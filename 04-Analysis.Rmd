@@ -20,7 +20,7 @@ mapTonerLite <- readRDS(file = file.path("temp", "mapTonerLite.rds"))
 
 TitoGmapsResults_point_gg <- 
   mapTonerLite + geom_point(data=TitoGmapsResults, aes(x=lon, y=lat), color="brown", size=2, alpha=0.5) +
-  labs(x = '', y = '') + labs(title = "Streets and squares dedicated to Tito", subtitle = paste("(based on Google Maps data as of", Sys.Date(), ")"))
+  labs(x = '', y = '') + labs(title = "Streets and squares dedicated to Tito in the former Yugoslavia", caption = "Source: Google Maps; https://giorgiocomai.eu/FindingTito")
 
 TitoGmapsResults_point_gg
 
@@ -57,7 +57,7 @@ TitoGmaps_density_gg <- mapTonerLite +
     aes(x = lon, y = lat, fill = ..level..,  alpha = ..level..),
     size = 2, bins = 8, data = TitoGmapsResults,
     geom = "polygon"
-)
+) + labs(title = "Streets and squares dedicated to Tito in the former Yugoslavia", caption = "Source: Google Maps; https://giorgiocomai.eu/FindingTito") + theme(legend.position="none")
 
 TitoGmaps_density_gg
 
@@ -68,7 +68,8 @@ TitoGmaps_density_sq_gg <-
     aes(x = lon, y = lat),
     size = .5, bins = 20, alpha = 1/2,
     data = TitoGmapsResults) +
-  scale_fill_gradient(low = "#ffffb2", high = "#bd0026")
+  scale_fill_gradient(low = "#ffffb2", high = "#bd0026") +
+  labs(title = "Streets and squares dedicated to Tito in the former Yugoslavia", caption = "Source: Google Maps; https://giorgiocomai.eu/FindingTito")
 
 TitoGmaps_density_sq_gg
 
@@ -78,7 +79,9 @@ ExportGraph(graph = TitoGmaps_density_sq_gg, filename = "TitoGmaps_density_sq_gg
 
 ## By country / Administrative level
 
-At the sub-country level, Google Maps records two levels of administrative sub-divisions. Unfortunately, not all streets are recorded with the respective sub-division, and the categorisation does not seem to be consistent.
+At the sub-country level, Google Maps records two levels of administrative sub-divisions. Unfortunately, not all streets are recorded with the respective sub-division, and the categorisation does not seem to be consistent. 
+
+*N.B.: names of countries and administrative units are here presented exactly as they are outputted by the Google APIs. The author is thus not responsible for the uneven trasliteration, or for the names chosen to refer to countries or administrative units.*
 
 ```{r}
 
@@ -90,9 +93,15 @@ TitoGmapsMore <- bind_rows(ImportData(filename = "titovResults"), ImportData("ma
   distinct(locality, route, .keep_all = TRUE) %>% #remove same locality, same street name
   distinct(lon, lat, route, administrative_area_level_1, administrative_area_level_2, country)
 
-ShowTable(data = TitoGmapsMore %>% count(country, sort = TRUE), caption = "Streets and squares dedicated to Tito in the former Yugoslavia, by country, according to Google Maps/#FindingTito")
+TitoGmapsByCountry <- bind_rows(TitoGmapsMore %>% count(country, sort = TRUE),
+                                data_frame(country = "Kosovo", n = 0))
 
-ExportData(data = TitoGmapsMore %>% count(country, sort = TRUE), filename = "TitoGmapsByCountry")
+# manually adding Kosovo = 0
+
+
+ShowTable(data = TitoGmapsByCountry, caption = "Streets and squares dedicated to Tito in the former Yugoslavia, by country, according to Google Maps/#FindingTito")
+
+ExportData(data = TitoGmapsByCountry, filename = "TitoGmapsByCountry")
 
 ```
 
@@ -105,7 +114,7 @@ TitoGmapsByCountry_gg <- ImportData(filename = "TitoGmapsByCountry") %>% mutate(
   scale_y_continuous(name = "") +
   theme_minimal() +
   coord_flip() +
-  labs(title = "Number of streets dedicated to Tito in the former Yugoslavia (by country)", subtitle = "According to Goole Maps/FindingTito")
+  labs(title = "Number of streets dedicated to Tito in the former Yugoslavia", subtitle = "(by country)", caption = "Source: Google Maps; https://giorgiocomai.eu/FindingTito")
 
 TitoGmapsByCountry_gg
 ExportGraph(graph = TitoGmapsByCountry_gg, filename = "TitoGmapsByCountry_gg")
@@ -126,7 +135,7 @@ ExportData(data = TitoGmapsMore %>% count(administrative_area_level_2, country, 
 
 ## By street name
 
-This is not very useful, however, since it mostly points at the different ways in which Google Maps stores street names.
+This is colourful, but not very useful, since it mostly points at the different ways in which Google Maps stores street names.
 
 ```{r}
 ShowTable(TitoGmapsResults %>% count(route, sort = TRUE))
@@ -162,8 +171,11 @@ mapTonerLite + stat_bin2d(
   data = left_join(TitoGmapsResults, TitoGmapsResults %>% count(route)) %>% filter(n>2))
 
 mapTonerLite + 
-  geom_point(data=left_join(TitoGmapsResults, TitoGmapsResults %>% count(route)) %>% filter(n>2), aes(x=lon, y=lat, color = route), size=2, alpha=0.5) +
-  labs(x = '', y = '') + labs(title = "Streets and squares dedicated to Tito")
+  geom_point(data=left_join(TitoGmapsResults, TitoGmapsResults %>% count(route)) %>%
+               filter(n>2),
+             aes(x=lon, y=lat, color = route), size=2, alpha=0.5) +
+  labs(x = '', y = '') +
+  labs(title = "Streets and squares dedicated to Tito")
 
 ```
 

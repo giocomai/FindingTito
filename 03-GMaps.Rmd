@@ -128,7 +128,8 @@ Google Maps API has a daily quota of 2500 free queries per day. We can either ma
 
 
 ```{r}
-### This makes only the number of queries allowed in a given day, then it stops. If you re-run this another day it will pick up from where it left.
+### This makes only the number of queries allowed in a given day, then it stops. 
+### If you re-run this another day it will pick up from where it left.
 
 
 
@@ -137,7 +138,8 @@ dir.create(path = "temp", showWarnings = FALSE)
 if (geocodeQueryCheck()>1) {
   if (file.exists(file.path("data", "titovResults.rds"))==FALSE) {
     #this simply aims to prepare a properly structured data frame
-    titovResults <- cbind(geocode("Titov, Sarajevo, Bosnia and Herzegovina", output='more'), Query = "Titov, Sarajevo, Bosnia and Herzegovina", QueryId = 0)
+    titovResults <- cbind(geocode("Titov, Sarajevo, Bosnia and Herzegovina", output='more'),
+                          Query = "Titov, Sarajevo, Bosnia and Herzegovina", QueryId = 0)
     start <- sum(titovProgressId, 1)
     stop <- sum(titovProgressId, geocodeQueryCheck())
     if (stop>length(titovQuery)) {
@@ -167,7 +169,7 @@ if (geocodeQueryCheck()>1) {
       }
       temp <- data_frame(lon = "")
       for (i in start:stop) {
-        # If it receives an "over_quey limit" warning then skip
+        # If it receives an "over_query_limit" warning then skip
         if (temp$lon!="OVER_QUERY_LIMIT") {
           # makes sure over quota is properly dealt with: if over quota, just skips
           temp <- tryCatch(expr = geocode(location = titovQuery[i], output='more', messaging=FALSE), warning = function(w) {
